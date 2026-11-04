@@ -1,0 +1,68 @@
+import React, {useEffect, useState} from 'react';
+import {AbsoluteFill, Composition, continueRender, delayRender, staticFile} from 'remotion';
+
+export type ExperimentProps={index:number;layout:string;topic:string;referenceLabel:string;headline:string;detail:string;scene:number;sceneCount:number;fontFile:string;envelope:number[]};
+const palettes=[['#101e27','#eef5ec','#91cfc4'],['#efe4ce','#322a22','#9c492c'],['#e8edf1','#173147','#b6503c'],['#1a1730','#f7e6c6','#d7b368'],['#17392f','#f7efdb','#aaca7b'],['#f1e9df','#48313b','#a24f70']];
+const fonts=new Map<string,Promise<void>>();
+function Graphic({p,ink,accent,bg}:{p:ExperimentProps;ink:string;accent:string;bg:string}){
+ const n=p.scene,step=(n+1)/p.sceneCount;
+ const circle=(x:number,y:number,r:number,fill='none',opacity=1)=><circle cx={x} cy={y} r={r} fill={fill} stroke={accent} strokeWidth={3} opacity={opacity}/>;
+ const line=(x:number,y:number,x2:number,y2:number)=><line x1={x} y1={y} x2={x2} y2={y2} stroke={accent} strokeWidth={4}/>;
+ const txt=(s:string,x:number,y:number,size=36,color=ink)=><text x={x} y={y} textAnchor="middle" fill={color} fontSize={size} fontWeight={500}>{s}</text>;
+ const rect=(x:number,y:number,w:number,h:number,fill='none')=><rect x={x} y={y} width={w} height={h} rx={16} fill={fill} stroke={accent} strokeWidth={3}/>;
+ let art:React.ReactNode;
+ switch(p.layout){
+ case 'layers':art=<>{[220,170,120,65].map((r,i)=><g key={r} opacity={i<n?0.12:0.85}>{circle(400,350,r)}{txt(['देह','विचार','भाव','साक्षी?'][i],400,350-r+28,26)}</g>)}{circle(400,350,8,accent)}</>;break;
+ case 'constellation':art=<>{['माता','पिता','बन्धु','सखा','विद्या','द्रविणम्'].map((s,i)=>{const a=i*Math.PI/3;const x=400+225*Math.cos(a),y=345+200*Math.sin(a);return <g key={s}>{line(400,345,x,y)}{circle(x,y,65,i<=n?accent:bg)}{txt(s,x,y+12,28,i<=n?bg:ink)}</g>;})}{circle(400,345,70,bg)}{txt('त्वमेव',400,357,32)}</>;break;
+ case 'letter':art=<>{rect(75,90,650,490,bg)}{[0,1,2,3,4].map(i=><line key={i} x1={120} y1={200+i*65} x2={Math.min(650,260+n*110-i*15)} y2={200+i*65} stroke={accent} strokeWidth={i===0?9:3}/>)}{txt('सप्रेम,',200,150,34)}{txt('आपका विद्यार्थी',520,540,36)}<path d="M80 95L400 320L720 95" stroke={accent} opacity={0.2} fill="none"/></>;break;
+ case 'prism':art=<>{[0,1,2].map(i=><line key={i} x1={40} y1={290+i*40} x2={320} y2={330} stroke={accent} strokeWidth={5-i}/>)}<path d="M400 110L610 520H190Z" fill={accent} fillOpacity={0.13} stroke={accent} strokeWidth={4}/>{[0,1,2,3,4].map(i=><line key={i} x1={460} y1={330} x2={760} y2={160+i*82} stroke={accent} strokeWidth={3} opacity={0.25+i*.13}/>)}{txt('धी',400,355,72)}</>;break;
+ case 'hinge':art=<>{rect(40,140,340,340)}{rect(420,140,340,340,n>1?accent:'none')}{txt('करुणा',210,335,64)}{txt('अवतार',590,335,64,n>1?bg:ink)}{line(400,100,400,540)}{circle(400,320,14,bg)}</>;break;
+ case 'ripple':art=<>{[0,1,2,3,4].map(i=><ellipse key={i} cx={400} cy={350} rx={75+i*65} ry={35+i*38} fill="none" stroke={accent} strokeWidth={2} opacity={1-i*.16}/>)}{txt('मधुरम्',400,360,84)}{circle(400,350,15,accent,.2)}</>;break;
+ case 'paths':art=<><path d="M400 590V380Q400 300 210 280V140M400 380Q400 300 590 280V140" stroke={accent} strokeWidth={8} fill="none"/>{circle(210,140,70,n===1?accent:bg)}{circle(590,140,70,n>=2?accent:bg)}{txt('शब्द',210,155,32,n===1?bg:ink)}{txt('भाव',590,155,32,n>=2?bg:ink)}{txt('प्रार्थना',400,625,34)}</>;break;
+ case 'repair':art=<><path d="M180 180H620L570 490Q400 620 230 490Z" stroke={ink} strokeWidth={6} fill={accent} fillOpacity={.12}/><path d="M420 180L360 290L430 350L350 440L395 540" stroke={n>1?accent:ink} strokeWidth={n>1?12:3} fill="none"/>{txt(n>1?'सुधार':'स्वीकार',400,110,46)}{line(155,580,645,580)}</>;break;
+ case 'river':art=<>{['गङ्गा','यमुना','गोदावरी','सरस्वती','नर्मदा','सिन्धु','कावेरी'].map((s,i)=><g key={s}><path d={`M${110+i*92} 70C${30+i*92} 240 ${190+i*92} 350 ${110+i*92} 560`} stroke={accent} strokeWidth={i<=n+2?6:2} opacity={i<=n+2?1:.25} fill="none"/>{txt(s,110+i*92,610,22)}</g>)}</>;break;
+ case 'balance':art=<>{line(400,160,400,550)}{line(190,550,610,550)}{line(150,240,650,240)}{line(190,240,140,410)}{line(190,240,240,410)}{line(610,240,560,410)}{line(610,240,660,410)}<path d="M90 410Q190 510 290 410M510 410Q610 510 710 410" stroke={accent} strokeWidth={5} fill="none"/>{txt('बल',190,190,55)}{txt('सेवा',610,190,55)}{circle(400,240,20,bg)}</>;break;
+ case 'lotus':art=<>{Array.from({length:8},(_,i)=><ellipse key={i} cx={400} cy={290} rx={62} ry={170} transform={`rotate(${i*45} 400 390)`} stroke={accent} strokeWidth={3} fill={accent} fillOpacity={.13+(i===n?.2:0)}/>)}{circle(400,390,68,bg)}{txt('अम्बुज',400,405,31)}{line(400,460,400,610)}</>;break;
+ case 'steps':art=<>{[0,1,2,3].map(i=><g key={i}>{rect(110+i*155,490-i*115,155,100,i<=n?accent:'none')}{txt(String(i+1),188+i*155,553-i*115,50,i<=n?bg:ink)}</g>)}<path d="M120 450L280 335L440 220L620 100" stroke={ink} strokeWidth={3} fill="none"/></>;break;
+ case 'window':art=<>{rect(160,100,480,480)}<path d={`M160 100L${Math.max(160,400-n*120)} 170V520L160 580Z`} fill={accent} opacity={.3}/><path d={`M640 100L${Math.min(640,400+n*120)} 170V520L640 580Z`} fill={accent} opacity={.3}/>{txt(n===0?'?':'प्रसन्न',400,320,64)}{txt(n===0?'शब्द':'वदनम्',400,405,64)}</>;break;
+ case 'negative':art=<><rect x={80} y={80} width={640} height={520} fill={accent}/><circle cx={400} cy={340} r={190+n*5} fill={bg}/>{txt('रूप?',400,360,72)}{txt('संकेत',400,645,24)}</>;break;
+ case 'book':art=<><path d="M400 200Q200 80 70 160V530Q200 440 400 560Q600 440 730 530V160Q600 80 400 200Z" fill={accent} fillOpacity={.12} stroke={accent} strokeWidth={5}/>{line(400,200,400,560)}{[0,1,2,3].map(i=><g key={i}>{line(120,230+i*65,340,260+i*65)}{line(460,260+i*65,680,230+i*65)}</g>)}{txt(n===0?'?':'सीख',585,415,70)}</>;break;
+ case 'journal':art=<>{[0,1,2,3,4,5,6].map(i=><g key={i}><line x1={80+i*100} y1={80} x2={80+i*100} y2={600} stroke={accent} opacity={.15}/><line x1={80} y1={80+i*80} x2={720} y2={80+i*80} stroke={accent} opacity={.15}/></g>)}<path d="M400 530V220M400 340Q200 150 260 370Q330 450 400 340M400 290Q630 120 540 360Q470 420 400 290" fill={accent} fillOpacity={.3} stroke={accent} strokeWidth={4}/>{rect(315,470,170,115)}{txt(['देखें','समझें','संभालें','स्मरण'][n%4],600,560,32)}</>;break;
+ case 'response':art=<>{rect(60,130,520,180,n%2===0?accent:'none')}{rect(220,390,520,180,n%2===1?accent:'none')}{txt('सुनिए',320,240,65,n%2===0?bg:ink)}{txt('गुनगुनाएँ',480,500,55,n%2===1?bg:ink)}{line(580,300,580,360)}</>;break;
+ case 'quiet':art=<>{circle(400,350,145)}{circle(400,350,6,accent)}{txt('नाम-स्मरण',400,610,32)}</>;break;
+ case 'diagram':art=<>{rect(70,100,280,200,n===1?accent:'none')}{rect(450,100,280,200,n===2?accent:'none')}{txt('कर्म',210,220,60,n===1?bg:ink)}{txt('फल',590,220,60,n===2?bg:ink)}{line(350,200,450,200)}<path d="M430 180L450 200L430 220" fill="none" stroke={accent} strokeWidth={4}/>{rect(190,420,420,130)}{txt('अकर्म नहीं',400,505,45)}<path d="M210 300V370H400V420" stroke={accent} strokeWidth={3} fill="none"/></>;break;
+ case 'meter':art=<>{p.envelope.slice(0,60).map((v,i)=><rect key={i} x={55+i*11.7} y={350-v*200} width={5} height={Math.max(3,v*400)} fill={i/60<=step?accent:ink} opacity={i/60<=step?.95:.2}/>)}{line(55,620,745,620)}{txt('मूल ध्वनि की तीव्रता',400,670,24)}</>;break;
+ case 'clock':art=<>{circle(400,340,235)}{Array.from({length:12},(_,i)=>{const a=i*Math.PI/6;return <g key={i}>{line(400+205*Math.sin(a),340-205*Math.cos(a),400+220*Math.sin(a),340-220*Math.cos(a))}</g>;})}{line(400,340,400+150*Math.sin(step*5),340-150*Math.cos(step*5))}{circle(400,340,12,accent)}{txt('अभी',400,410,42)}</>;break;
+ case 'orbit':art=<>{circle(400,345,220)}{circle(400,345,130)}{circle(400,345,25,accent)}{['व्यक्ति','अवसर','सीख'].map((s,i)=>{const a=i*2.1-1.5;const x=400+220*Math.cos(a),y=345+220*Math.sin(a);return <g key={s}>{circle(x,y,65,i===Math.max(0,n-1)?accent:bg)}{txt(s,x,y+10,27,i===Math.max(0,n-1)?bg:ink)}</g>;})}</>;break;
+ case 'release':art=<><path d={`M80 400C180 60 560 80 550 330C540 570 230 580 230 340C230 210 610 200 730 ${420-n*50}`} stroke={accent} strokeWidth={12} fill="none" strokeLinecap="round"/>{circle(80,400,16,accent)}{circle(730,420-n*50,16,accent)}{txt('श्रद्धा',400,640,38)}</>;break;
+ case 'sky':art=<>{[210,155,100].map(r=><path key={r} d={`M${400-r} 430A${r} ${r} 0 0 1 ${400+r} 430`} fill="none" stroke={accent} strokeWidth={3} opacity={r/220}/>)}{line(70,450,730,450)}{circle(400,250,45,accent)}{txt('व्योम',400,590,70)}</>;break;
+ case 'message':art=<>{rect(70,100,520,170)}{txt('सब ठीक?',330,205,50)}{rect(220,320,520,210,accent)}{txt(n===0?'…':'मैं सुन रहा हूँ।',480,450,n===0?90:40,bg)}<path d="M270 530L230 580L350 530" fill={accent}/></>;break;
+ case 'sorting':art=<>{['तुलना','दिखावा','आग्रह'].map((s,i)=><g key={s} opacity={n>i?.15:1}>{rect(80+i*35,100+i*145,570,125)}{txt(s,370+i*35,185+i*145,50)}</g>)}{txt('जगह',690,590,35)}</>;break;
+ case 'focus':art=<>{[520,400,280,160].map((s,i)=><g key={s} opacity={i===n?1:.3}>{rect(400-s/2,340-s/2,s,s)}</g>)}{circle(400,340,9,accent)}{txt('प्रेरणा',400,670,40)}</>;break;
+ case 'postcard':art=<>{rect(40,110,720,440)}{line(420,150,420,510)}{[0,1,2].map(i=><g key={i}>{line(470,330+i*65,700,330+i*65)}</g>)}{rect(620,150,100,110)}{txt('शुभ',670,220,30)}{txt('कुशलता',230,320,55)}{txt('की कामना',230,400,45)}<path d="M80 570L720 570" stroke={accent} strokeWidth={4} strokeDasharray="8 12"/></>;break;
+ case 'bridge':art=<>{rect(30,370,250,180)}{rect(520,370,250,180)}<path d="M230 375Q400 50 570 375M230 400H570" stroke={accent} strokeWidth={8} fill="none"/>{['अ','स'].map((s,i)=><g key={s}>{circle(155+i*490,315,45)}{txt(s,155+i*490,330,36)}</g>)}{txt(n===0?'असहमति':'मैत्री',400,130,45)}</>;break;
+ case 'threshold':art=<>{rect(200,70,400,530)}<path d={`M200 70L${420+n*30} 130V560L200 600Z`} fill={accent} fillOpacity={.2} stroke={accent} strokeWidth={4}/>{circle(260+n*30,350,9,accent)}{txt('भीतर',400,670,37)}{line(75,600,725,600)}</>;break;
+ default:art=null;
+ }
+ return <svg viewBox="0 0 800 720" width="100%" height="100%" style={{overflow:'visible'}}>{art}</svg>;
+}
+function ExperimentScene(p:ExperimentProps){
+ const [handle]=useState(()=>delayRender('Load local Devanagari font'));
+ useEffect(()=>{let ready=fonts.get(p.fontFile);if(!ready){ready=(async()=>{const face=new FontFace('SBSNirmala',`url("${staticFile(p.fontFile)}")`);document.fonts.add(await face.load());await document.fonts.ready;})();fonts.set(p.fontFile,ready);}ready.then(()=>continueRender(handle));},[p.fontFile,handle]);
+ const [bg,ink,accent]=palettes[(p.index-1)%palettes.length];const paper=['letter','journal','book','postcard','steps'].includes(p.layout);const inverted=['negative','hinge','window'].includes(p.layout);
+ // Distinct reading orders: word-led, illustration-led, letter, conversation and diagram.
+ const positions:Record<string,[number,number,number,number]>={layers:[210,430,720,1230],constellation:[190,610,720,390],letter:[270,870,500,490],prism:[1040,220,740,1240],hinge:[210,520,610,1190],ripple:[190,650,560,410],paths:[190,450,690,1240],repair:[190,660,570,410],river:[190,470,670,1230],balance:[190,700,510,420],lotus:[1040,240,730,1240],steps:[190,740,500,400],window:[200,490,670,1250],negative:[190,720,500,420],book:[190,740,530,410],journal:[240,730,600,440],response:[190,660,640,410],quiet:[710,180,380,890],diagram:[190,680,610,410],meter:[190,640,650,410],clock:[1040,230,730,1240],orbit:[190,420,710,1210],release:[190,680,570,410],sky:[1040,230,730,1240],message:[190,410,720,1210],sorting:[190,720,510,420],focus:[1040,230,730,1240],postcard:[190,780,500,430],bridge:[190,690,590,410],threshold:[190,410,710,1230]};
+ const [titleTop,graphicTop,graphicHeight,detailTop]=positions[p.layout]||[210,430,720,1230];
+ const titleSize=titleTop>1000?(p.headline.length>24?53:70):p.headline.length>36?58:p.headline.length>23?68:82;
+ return <AbsoluteFill style={{background:bg,color:ink,fontFamily:'SBSNirmala, sans-serif',overflow:'hidden'}}>
+  {paper?<AbsoluteFill style={{backgroundImage:`repeating-linear-gradient(0deg, transparent,transparent 70px,${accent}12 71px,transparent 72px)`}}/>:null}
+  <div style={{position:'absolute',left:86,top:120,width:790,display:'flex',justifyContent:'space-between',fontSize:22,color:accent,letterSpacing:2}}><span>SHIVALA BHAKTI SAGAR</span><span>{String(p.index).padStart(2,'0')} / 30</span></div>
+  <div style={{position:'absolute',left:86,top:titleTop,width:790,fontSize:titleSize,fontWeight:700,lineHeight:1.43,textAlign:paper?'left':'center'}}>{p.headline}</div>
+  <div style={{position:'absolute',left:80,top:graphicTop,width:800,height:graphicHeight}}><Graphic p={p} ink={ink} bg={bg} accent={accent}/></div>
+  <div style={{position:'absolute',left:92,top:detailTop,width:775,fontSize:38,lineHeight:1.5,textAlign:paper?'left':'center',fontWeight:400}}>{p.detail}</div>
+  <div style={{position:'absolute',left:92,top:1490,width:775,borderTop:`1px solid ${accent}60`,paddingTop:19,fontSize:23,lineHeight:1.5,color:accent}}>{p.referenceLabel}</div>
+  <div style={{position:'absolute',left:92,top:1585,display:'flex',gap:10}}>{Array.from({length:p.sceneCount},(_,i)=><div key={i} style={{width:Math.min(100,680/p.sceneCount),height:4,background:i===p.scene?accent:`${accent}30`}}/>)}</div>
+ </AbsoluteFill>;
+}
+const defaults:ExperimentProps={index:1,layout:'layers',topic:'आत्म-विचार',referenceLabel:'निर्वाणषट्कम्',headline:'मैं कौन हूँ?',detail:'एक प्रश्न से शुरुआत।',scene:0,sceneCount:5,fontFile:'shorts/sbs-experiments-20261021/Nirmala.ttc',envelope:[]};
+export const ExperimentRoot:React.FC=()=> <Composition<any,ExperimentProps> id="SBSExperimentScene" component={ExperimentScene} width={1080} height={1920} fps={30} durationInFrames={1} defaultProps={defaults}/>;
